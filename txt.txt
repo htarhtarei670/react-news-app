@@ -1,8 +1,6 @@
 import { logDOM } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./style.css";
-import supabase from "./supabase";
-
 const CATEGORIES = [
   { name: "technology", color: "#3b82f6" },
   { name: "science", color: "#16a34a" },
@@ -50,39 +48,15 @@ const initialFacts = [
 
 function App() {
   const [showForm,setShowForm]=useState(false);
-  const [facts,setFact]=useState([]);
-  const [isLoading,setIsLoading]=useState(true);
-  const[currentCategory,setCurrentCategory]=useState('all');
-
-  useEffect(function(){
-    const getData=async function(){
-      let query=supabase
-      .from('fact')
-      .select('*');
-
-      if(currentCategory !== "all"){
-       query= query.eq("category",currentCategory)
-      }
-
-      let { data: fact, error } = await query
-      .order("text",{ascending:true})
-      .limit(1000)
-
-      setIsLoading(false);
-      setFact(fact);
-    }
-    getData();
-  },[currentCategory])
-
+  const [facts,setFact]=useState(initialFacts);
     return (
      <> 
        <Header setShowForm={setShowForm} show={showForm}/>
         {showForm?<FormGroup setFact={setFact} setShowForm={setShowForm}/>:null};
 
         <main className="main">
-          <CategoryFliter setCurrentCategory={setCurrentCategory}/> 
-          {isLoading?<Loader/>:<FactList facts={facts}/>}
-
+          <CategoryFliter/> 
+          <FactList facts={facts}/>
         </main>
      </>   
       );
@@ -103,7 +77,6 @@ function Header({setShowForm,show}){
   )
 }
 
-//this is validation if source cann't be text string or num
 function isValidHttpUrl(string) {
   let url;
   
@@ -116,50 +89,33 @@ function isValidHttpUrl(string) {
   return url.protocol === "http:" || url.protocol === "https:";
 }
 
-function Loader(){
-  return <h1 className="loading">Loading... </h1>
-}
-
 function FormGroup({setFact,setShowForm}){
   const [text,setText]=useState("");
   const[source,setSource]=useState("");
   const[category,setCategory]=useState("");
-  const[isUploading,setIsUploading]=useState(false);
 
   const textLength=text.length;
 
   //when I submit this function start working
-  const handleSumit=async (e)=>{
+  const handleSumit=(e)=>{
     //to stop default loading of browser
     e.preventDefault();
 
     //to check user's text have or not....if it has to create new form
     if(text && isValidHttpUrl(source) && category){
-
-      //to store data in supabase 
-      const { data:newFact, error } = await supabase
-      .from('fact')
-      .insert([
-        { text,category,source },
-      ]).select("*")
-
-      setIsUploading(true);
-      console.log(newFact);
-
-      // //to change fact to fact obj
-      // const newFact={
-      //   id: Math.round(Math.random)*1000000,
-      //   text,
-      //   source,
-      //   category,
-      //   votesInteresting: 0,
-      //   votesMindblowing: 0,
-      //   votesFalse: 0,
-      //   createdIn: new Date().getFullYear,
-      // }
-      // //to show new fact on UI and create state
-      // setFact((currentFact)=>[newFact,...currentFact]);
-
+      //to change fact to fact obj
+      const newFact={
+        id: Math.round(Math.random)*1000000,
+        text,
+        source,
+        category,
+        votesInteresting: 0,
+        votesMindblowing: 0,
+        votesFalse: 0,
+        createdIn: new Date().getFullYear,
+      }
+      //to show new fact on UI and create state
+      setFact((currentFact)=>[newFact,...currentFact]);
 
       //to delete data from form
       setText("");
@@ -173,10 +129,10 @@ function FormGroup({setFact,setShowForm}){
   }
   return(
     <form className="form-group" onSubmit={handleSumit}>
-        <input type="text" placeholder="Share A Fact With A Words...." value={text} onChange={(e)=>setText(e.target.value)} disabled={isUploading}/> 
+        <input type="text" placeholder="Share A Fact With A Words...." value={text} onChange={(e)=>setText(e.target.value)}/> 
         <span>{200-textLength}</span>
-        <input type="text" placeholder="Trustworthy Source" value={source} onChange={(e)=>setSource(e.target.value)} disabled={isUploading}/>
-        <select name="" value={category} onChange={(e)=>setCategory(e.target.value)} disabled={isUploading}>
+        <input type="text" placeholder="Trustworthy Source" value={source} onChange={(e)=>setSource(e.target.value)}/>
+        <select name="" value={category} onChange={(e)=>setCategory(e.target.value)}>
             <option value="">CHOOSE CATEGORY</option>
             {CATEGORIES.map(cat=>
               <option value={cat.name} key={cat.name}>{cat.name.toUpperCase()}</option>
@@ -188,15 +144,15 @@ function FormGroup({setFact,setShowForm}){
 }
 
 
-function CategoryFliter({setCurrentCategory}){
+function CategoryFliter(){
   return(
     <aside>
       <ul>
-        <li><button class="btn btn-category btn-all-cate" onClick={()=>setCurrentCategory('all')}>All</button></li>
+        <li><button class="btn btn-category btn-all-cate">All</button></li>
           {
             CATEGORIES.map(cat=>
               <li key={cat.name}>
-                <button class="btn btn-category" style={{ background:cat.color }} onClick={()=>setCurrentCategory(cat.name)}>{cat.name}</button>
+                <button class="btn btn-category" style={{ background:cat.color }}>{cat.name}</button>
               </li>
             )
           }     
@@ -207,23 +163,18 @@ function CategoryFliter({setCurrentCategory}){
 
 
 function FactList({facts}){
-  if(facts.length === 0){
-    return <h1 className="loading">There is no fact for this category...Let Create One! </h1>
-  }
-  else{
-    return(
-      <section>
-        <ul class="fact-group">
-        {
-          facts.map(fact=>
-            <Fact factObj={fact} key={fact.id}/> 
-          )
-        }
-        </ul>
-        <p>There are {facts.length} facts.</p>
-      </section>
-  )
-  }
+  return(
+    <section>
+      <ul class="fact-group">
+      {
+        facts.map(fact=>
+          <Fact factObj={fact} key={fact.id}/> 
+        )
+      }
+      </ul>
+      <p>There are {facts.length} facts.</p>
+    </section>
+)
 }
  
 
@@ -235,9 +186,9 @@ function Fact({factObj}){
         </p>
         <span class="tag" style={{backgroundColor:CATEGORIES.find(col=>col.name ===factObj.category).color}}> #{factObj.category}#</span>
         <div class="reacts">
-            <button>👍 {factObj.votelike}</button>
-            <button>❤️ {factObj.voteheart}</button>
-            <button>😢 {factObj.votesad}</button>
+            <button>👍 {factObj.votesFalse}</button>
+            <button>❤️ {factObj.votesInteresting}</button>
+            <button>😢 {factObj.votesMindblowing}</button>
         </div>
     </li>)
 }
